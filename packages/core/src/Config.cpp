@@ -796,7 +796,15 @@ bool Config::parse(
 bool Config::load_middlewares(
     SystemHandleInfoMap& info_map) const
 {
-  for (const auto& mw_entry : m_middlewares)
+  using Entry = std::map<std::string, MiddlewareConfig>::value_type;
+  std::list<Entry> middlewares(m_middlewares.begin(), m_middlewares.end());
+  middlewares.sort([](const Entry & a, const Entry & b) -> bool
+  {
+      auto & from = b.second.types_from;
+      return std::find(from.begin(), from.end(), a.first) != from.end();
+  });
+
+  for (const auto& mw_entry : middlewares)
   {
     const std::string& mw_name = mw_entry.first;
     const MiddlewareConfig& mw_config = mw_entry.second;
