@@ -270,6 +270,7 @@ public:
     if(op_str == JsonOpPublishKey)
     {
       std::string topic_name = get_required_string(msg, JsonTopicNameKey);
+
       const xtypes::DynamicType& dest_type = get_type_by_topic(topic_name);
       endpoint.receive_publication_ws(
             topic_name,

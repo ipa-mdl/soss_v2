@@ -17,6 +17,7 @@
 
 #include <soss/json/conversion.hpp>
 #include <stack>
+#include <limits>
 
 #include <iostream>
 
@@ -39,6 +40,20 @@ Json::const_reference access_json_value(
   }
   static Json none;
   return none;
+}
+
+template <typename T> T get_json_float(Json::const_reference json_node)
+{
+  if (json_node.is_number_float()) {
+      return json_node.get<T>();
+  }else{
+      std::string s = json_node.get<std::string>();
+      if (s == "inf") return std::numeric_limits<T>::infinity();
+      if (s == "-inf") return -std::numeric_limits<T>::infinity();
+      if (s == "nan") return std::numeric_limits<T>::quiet_NaN();
+      if (s == "-nan") return -std::numeric_limits<T>::quiet_NaN();
+  }
+  throw false;
 }
 
 bool json_to_soss(
@@ -100,10 +115,10 @@ bool json_to_soss(
         soss_node.data().value(access_json_value(soss_node, json_stack.top()).get<uint64_t>());
         break;
       case xtypes::TypeKind::FLOAT_32_TYPE:
-        soss_node.data().value(access_json_value(soss_node, json_stack.top()).get<float>());
+        soss_node.data().value(get_json_float<float>(access_json_value(soss_node, json_stack.top())));
         break;
       case xtypes::TypeKind::FLOAT_64_TYPE:
-        soss_node.data().value(access_json_value(soss_node, json_stack.top()).get<double>());
+        soss_node.data().value(get_json_float<double>(access_json_value(soss_node, json_stack.top())));
         break;
       default:
         throw false;
@@ -130,6 +145,21 @@ Json::reference add_json_node(
   }
   static Json none;
   return none;
+}
+
+template<typename T> Json::reference add_json_float(
+        const xtypes::DynamicData::ReadableNode& soss_node,
+        Json::pointer json_node)
+{
+  T value = soss_node.data().value<T>();
+  if (std::isnormal(value))
+  {
+    return add_json_node(soss_node, json_node) = value;
+  }
+  else
+  {
+    return add_json_node(soss_node, json_node) = std::to_string(value);
+  }
 }
 
 bool soss_to_json(
@@ -190,10 +220,10 @@ bool soss_to_json(
         add_json_node(soss_node, json_stack.top()) = soss_node.data().value<uint64_t>();
         break;
       case xtypes::TypeKind::FLOAT_32_TYPE:
-        add_json_node(soss_node, json_stack.top()) = soss_node.data().value<float>();
+        add_json_float<float>(soss_node, json_stack.top());
         break;
       case xtypes::TypeKind::FLOAT_64_TYPE:
-        add_json_node(soss_node, json_stack.top()) = soss_node.data().value<double>();
+        add_json_float<double>(soss_node, json_stack.top());
         break;
       default:
         throw false;
